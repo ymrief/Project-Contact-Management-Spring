@@ -2,6 +2,7 @@ package belajarspring.restful.service;
 
 import belajarspring.restful.entity.User;
 import belajarspring.restful.model.RegisterUserRequest;
+import belajarspring.restful.model.UserResponse;
 import belajarspring.restful.repository.UserRepository;
 import belajarspring.restful.security.BCrypt;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,5 +37,13 @@ public class UserServiceImpl implements UserService {
         user.setName(registerUserRequest.getName());
 
         userRepository.save(user);
+    }
+
+    @Override
+    public UserResponse get(User user) {
+        return UserResponse.builder()
+                .username(user.getUsername())
+                .name(user.getName())
+                .build();
     }
 }

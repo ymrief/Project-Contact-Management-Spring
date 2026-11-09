@@ -2,6 +2,7 @@ package belajarspring.restful.controller;
 
 import belajarspring.restful.entity.User;
 import belajarspring.restful.model.RegisterUserRequest;
+import belajarspring.restful.model.UserResponse;
 import belajarspring.restful.model.WebResponse;
 import belajarspring.restful.repository.UserRepository;
 import belajarspring.restful.security.BCrypt;
@@ -37,6 +38,16 @@ class UserControllerTest {
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
+    }
+
+    private void createUser() {
+        User user = new User();
+        user.setUsername("test");
+        user.setPassword(BCrypt.hashpw("test", BCrypt.gensalt()));
+        user.setName("Martinus");
+        user.setToken("test");
+        user.setTokenExpiredAt(System.currentTimeMillis() + 1000000L);
+        userRepository.save(user);
     }
 
     @Test
@@ -85,11 +96,7 @@ class UserControllerTest {
 
     @Test
     void testRegisterDuplicate() throws Exception {
-        User user = new User();
-        user.setUsername("test");
-        user.setPassword(BCrypt.hashpw("test", BCrypt.gensalt()));
-        user.setName("Martinus");
-        userRepository.save(user);
+        createUser();
 
         RegisterUserRequest request = new RegisterUserRequest();
         request.setUsername("test");
@@ -108,6 +115,81 @@ class UserControllerTest {
             });
 
             assertNotNull(response.getErrors());
+        });
+    }
+
+    @Test
+    void getUserUnauthorized() throws Exception {
+        mockMvc.perform(
+                get("/api/users/current")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .header("X-API-TOKEN", "notfound")
+        ).andExpectAll(
+                status().isUnauthorized()
+        ).andDo(result -> {
+            WebResponse<String> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+            });
+
+            assertNotNull(response.getErrors());
+        });
+    }
+
+    @Test
+    void getUserUnauthorizedTokenNotSent() throws Exception {
+        mockMvc.perform(
+                get("/api/users/current")
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andExpectAll(
+                status().isUnauthorized()
+        ).andDo(result -> {
+            WebResponse<String> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+            });
+
+            assertNotNull(response.getErrors());
+        });
+    }
+
+    @Test
+    void getUserTokenExpired() throws Exception {
+        User user = new User();
+        user.setUsername("test");
+        user.setPassword(BCrypt.hashpw("test", BCrypt.gensalt()));
+        user.setName("Martinus");
+        user.setToken("test");
+        user.setTokenExpiredAt(System.currentTimeMillis() - 1000000L);
+        userRepository.save(user);
+
+        mockMvc.perform(
+                get("/api/users/current")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .header("X-API-TOKEN", "test")
+        ).andExpectAll(
+                status().isUnauthorized()
+        ).andDo(result -> {
+            WebResponse<String> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+            });
+
+            assertNotNull(response.getErrors());
+        });
+    }
+
+    @Test
+    void getUserSuccess() throws Exception {
+        createUser();
+
+        mockMvc.perform(
+                get("/api/users/current")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .header("X-API-TOKEN", "test")
+        ).andExpectAll(
+                status().isOk()
+        ).andDo(result -> {
+            WebResponse<UserResponse> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+            });
+
+            assertNull(response.getErrors());
+            assertEquals("test", response.getData().getUsername());
+            assertEquals("Martinus", response.getData().getName());
         });
     }
 }
