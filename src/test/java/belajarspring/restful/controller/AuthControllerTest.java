@@ -40,6 +40,16 @@ class AuthControllerTest {
         userRepository.deleteAll();
     }
 
+    private void createUser() {
+        User user = new User();
+        user.setUsername("test");
+        user.setPassword(BCrypt.hashpw("test", BCrypt.gensalt()));
+        user.setName("Martinus");
+        user.setToken("test");
+        user.setTokenExpiredAt(System.currentTimeMillis() + 1000000L);
+        userRepository.save(user);
+    }
+
     @Test
     void loginFailedUserNotFound() throws Exception {
         LoginUserRequest request = new LoginUserRequest();
@@ -63,11 +73,7 @@ class AuthControllerTest {
 
     @Test
     void loginFailedWrongPassword() throws Exception {
-        User user = new User();
-        user.setUsername("test");
-        user.setPassword(BCrypt.hashpw("test", BCrypt.gensalt()));
-        user.setName("Martinus");
-        userRepository.save(user);
+        createUser();
 
         LoginUserRequest request = new LoginUserRequest();
         request.setUsername("test");
@@ -90,11 +96,7 @@ class AuthControllerTest {
 
     @Test
     void loginSuccess() throws Exception {
-        User user = new User();
-        user.setUsername("test");
-        user.setPassword(BCrypt.hashpw("test", BCrypt.gensalt()));
-        user.setName("Martinus");
-        userRepository.save(user);
+        createUser();
 
         LoginUserRequest request = new LoginUserRequest();
         request.setUsername("test");
@@ -119,6 +121,40 @@ class AuthControllerTest {
             assertNotNull(userDb);
             assertEquals(userDb.getToken(), response.getData().getToken());
             assertEquals(userDb.getTokenExpiredAt(), response.getData().getExpiredAt());
+        });
+    }
+
+    @Test
+    void logoutFailed() throws Exception {
+        mockMvc.perform(
+                delete("/api/auth/logout")
+                        .accept(MediaType.APPLICATION_JSON)
+        ).andExpectAll(
+                status().isUnauthorized()
+        ).andDo(result -> {
+            WebResponse<String> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+            });
+
+            assertNotNull(response.getErrors());
+        });
+    }
+
+    @Test
+    void logoutSuccess() throws Exception {
+        createUser();
+
+        mockMvc.perform(
+                delete("/api/auth/logout")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .header("X-API-TOKEN", "test")
+        ).andExpectAll(
+                status().isOk()
+        ).andDo(result -> {
+            WebResponse<String> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+            });
+
+            assertNull(response.getErrors());
+            assertEquals("OK", response.getData());
         });
     }
 }
