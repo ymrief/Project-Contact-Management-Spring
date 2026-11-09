@@ -2,6 +2,7 @@ package belajarspring.restful.controller;
 
 import belajarspring.restful.entity.User;
 import belajarspring.restful.model.RegisterUserRequest;
+import belajarspring.restful.model.UpdateUserRequest;
 import belajarspring.restful.model.UserResponse;
 import belajarspring.restful.model.WebResponse;
 import belajarspring.restful.repository.UserRepository;
@@ -190,6 +191,57 @@ class UserControllerTest {
             assertNull(response.getErrors());
             assertEquals("test", response.getData().getUsername());
             assertEquals("Martinus", response.getData().getName());
+        });
+    }
+
+    @Test
+    void updateUserUnauthorized() throws Exception {
+        UpdateUserRequest request = new UpdateUserRequest();
+
+        mockMvc.perform(
+                patch("/api/users/current")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+        ).andExpectAll(
+                status().isUnauthorized()
+        ).andDo(result -> {
+            WebResponse<String> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+            });
+
+            assertNotNull(response.getErrors());
+        });
+    }
+
+    @Test
+    void updateUserSuccess() throws Exception {
+        createUser();
+
+        UpdateUserRequest request = new UpdateUserRequest();
+        request.setName("PapaJusup");
+        request.setPassword("password");
+
+        mockMvc.perform(
+                patch("/api/users/current")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+                        .header("X-API-TOKEN", "test")
+        ).andExpectAll(
+                status().isOk()
+        ).andDo(result -> {
+            WebResponse<UserResponse> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+            });
+
+            assertNull(response.getErrors());
+            assertEquals("test", response.getData().getUsername());
+            assertEquals("PapaJusup", response.getData().getName());
+
+            User userDb = userRepository.findById("test").orElse(null);
+            assertNotNull(userDb);
+
+            assertEquals("PapaJusup", userDb.getName());
+            assertTrue(BCrypt.checkpw("password", userDb.getPassword()));
         });
     }
 }
