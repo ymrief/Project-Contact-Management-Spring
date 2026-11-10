@@ -245,4 +245,53 @@ class AddressControllerTest {
             assertTrue(addressRepository.existsById(response.getData().getId()));
         });
     }
+
+    @Test
+    void deleteAddressNotFound() throws Exception {
+        mockMvc.perform(
+                delete("/api/contacts/" + contactId + "/addresses/notfound")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-API-TOKEN", "test")
+        ).andExpectAll(
+                status().isNotFound()
+        ).andDo(result -> {
+            WebResponse<String> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+            });
+            assertNotNull(response.getErrors());
+        });
+    }
+
+    @Test
+    void deleteAddressSuccess() throws Exception {
+        Contact contact = contactRepository.findById(contactId).orElseThrow();
+
+        addressId = UUID.randomUUID().toString();
+
+        Address address = new Address();
+        address.setId(addressId);
+        address.setContact(contact);
+        address.setStreet("Jalan");
+        address.setCity("Jakarta");
+        address.setProvince("DKI");
+        address.setCountry("Indonesia");
+        address.setPostalCode("123123");
+        addressRepository.save(address);
+
+        mockMvc.perform(
+                delete("/api/contacts/" + contactId + "/addresses/" + addressId)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-API-TOKEN", "test")
+        ).andExpectAll(
+                status().isOk()
+        ).andDo(result -> {
+            WebResponse<String> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+            });
+            assertNull(response.getErrors());
+            assertEquals("OK", response.getData());
+
+            assertFalse(addressRepository.existsById(addressId));
+        });
+    }
 }
