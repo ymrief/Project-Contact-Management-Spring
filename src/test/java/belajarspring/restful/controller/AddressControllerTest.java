@@ -1,5 +1,6 @@
 package belajarspring.restful.controller;
 
+import belajarspring.restful.entity.Address;
 import belajarspring.restful.entity.Contact;
 import belajarspring.restful.entity.User;
 import belajarspring.restful.model.AddressResponse;
@@ -47,6 +48,8 @@ class AddressControllerTest {
     private MockMvc mockMvc;
 
     private String contactId;
+
+    private String addressId;
 
     @BeforeEach
     void setUp() {
@@ -122,6 +125,58 @@ class AddressControllerTest {
             assertEquals(request.getPostalCode(), response.getData().getPostalCode());
 
             assertTrue(addressRepository.existsById(response.getData().getId()));
+        });
+    }
+
+    @Test
+    void getAddressNotFound() throws Exception {
+        mockMvc.perform(
+                get("/api/contacts/" + contactId + "/addresses/notfound")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-API-TOKEN", "test")
+        ).andExpectAll(
+                status().isNotFound()
+        ).andDo(result -> {
+            WebResponse<String> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+            });
+            assertNotNull(response.getErrors());
+        });
+    }
+
+    @Test
+    void getAddressSuccess() throws Exception {
+        Contact contact = contactRepository.findById(contactId).orElseThrow();
+
+        addressId = UUID.randomUUID().toString();
+
+        Address address = new Address();
+        address.setId(addressId);
+        address.setContact(contact);
+        address.setStreet("Jalan");
+        address.setCity("Jakarta");
+        address.setProvince("DKI");
+        address.setCountry("Indonesia");
+        address.setPostalCode("123123");
+        addressRepository.save(address);
+
+        mockMvc.perform(
+                get("/api/contacts/" + contactId + "/addresses/" + addressId)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-API-TOKEN", "test")
+        ).andExpectAll(
+                status().isOk()
+        ).andDo(result -> {
+            WebResponse<AddressResponse> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+            });
+            assertNull(response.getErrors());
+            assertEquals(address.getId(), response.getData().getId());
+            assertEquals(address.getStreet(), response.getData().getStreet());
+            assertEquals(address.getCity(), response.getData().getCity());
+            assertEquals(address.getProvince(), response.getData().getProvince());
+            assertEquals(address.getCountry(), response.getData().getCountry());
+            assertEquals(address.getPostalCode(), response.getData().getPostalCode());
         });
     }
 }

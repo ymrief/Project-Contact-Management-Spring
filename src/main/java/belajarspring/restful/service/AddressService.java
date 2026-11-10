@@ -6,4 +6,6 @@ import belajarspring.restful.model.CreateAddressRequest;
 
 public interface AddressService {
     AddressResponse create(User user, CreateAddressRequest createAddressRequest);
+
+    AddressResponse get(User user, String contactId, String addressId);
 }
