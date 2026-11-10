@@ -4,6 +4,7 @@ import belajarspring.restful.entity.Contact;
 import belajarspring.restful.entity.User;
 import belajarspring.restful.model.ContactResponse;
 import belajarspring.restful.model.CreateContactRequest;
+import belajarspring.restful.model.UpdateContactRequest;
 import belajarspring.restful.repository.ContactRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -55,6 +56,23 @@ public class ContactServiceImpl implements ContactService {
     public ContactResponse get(User user, String id) {
         Contact contact = contactRepository.findFirstByUserAndId(user, id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Contact not found"));
+
+        return toContactResponse(contact);
+    }
+
+    @Override
+    @Transactional
+    public ContactResponse update(User user, UpdateContactRequest updateContactRequest) {
+        validationService.validate(updateContactRequest);
+
+        Contact contact = contactRepository.findFirstByUserAndId(user, updateContactRequest.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Contact not found"));
+
+        contact.setFirstName(updateContactRequest.getFirstName());
+        contact.setLastName(updateContactRequest.getLastName());
+        contact.setEmail(updateContactRequest.getEmail());
+        contact.setPhone(updateContactRequest.getPhone());
+        contactRepository.save(contact);
 
         return toContactResponse(contact);
     }
