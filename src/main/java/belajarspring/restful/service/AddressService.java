@@ -5,6 +5,8 @@ import belajarspring.restful.model.AddressResponse;
 import belajarspring.restful.model.CreateAddressRequest;
 import belajarspring.restful.model.UpdateAddressRequest;
 
+import java.util.List;
+
 public interface AddressService {
     AddressResponse create(User user, CreateAddressRequest createAddressRequest);
 
@@ -12,5 +14,7 @@ public interface AddressService {
 
     AddressResponse update(User user, UpdateAddressRequest updateAddressRequest);
 
-    void remove(User user, String contactId, String addressId);
+    void delete(User user, String contactId, String addressId);
+
+    List<AddressResponse> list(User user, String contactId);
 }
