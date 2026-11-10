@@ -1,5 +1,6 @@
 package belajarspring.restful.controller;
 
+import belajarspring.restful.entity.Contact;
 import belajarspring.restful.entity.User;
 import belajarspring.restful.model.ContactResponse;
 import belajarspring.restful.model.CreateContactRequest;
@@ -16,6 +17,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
+
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.MockMvcBuilder.*;
@@ -100,6 +103,54 @@ class ContactControllerTest {
             assertEquals("080812121212", response.getData().getPhone());
 
             assertTrue(contactRepository.existsById(response.getData().getId()));
+        });
+    }
+
+    @Test
+    void getContactNotFound() throws Exception {
+        mockMvc.perform(
+                get("/api/contacts/notfound")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-API-TOKEN", "test")
+        ).andExpectAll(
+                status().isNotFound()
+        ).andDo(result -> {
+            WebResponse<String> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<WebResponse<String>>() {
+            });
+            assertNotNull(response.getErrors());
+        });
+    }
+
+    @Test
+    void getContactSuccess() throws Exception {
+        User user = userRepository.findById("test").orElseThrow();
+
+        Contact contact = new Contact();
+        contact.setUser(user);
+        contact.setId(UUID.randomUUID().toString());
+        contact.setFirstName("Yusuf");
+        contact.setLastName("Martinus");
+        contact.setEmail("martinus@example.com");
+        contact.setPhone("080812121212");
+        contactRepository.save(contact);
+
+        mockMvc.perform(
+                get("/api/contacts/" + contact.getId())
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("X-API-TOKEN", "test")
+        ).andExpectAll(
+                status().isOk()
+        ).andDo(result -> {
+            WebResponse<ContactResponse> response = objectMapper.readValue(result.getResponse().getContentAsString(), new TypeReference<>() {
+            });
+            assertNull(response.getErrors());
+            assertEquals(contact.getId(), response.getData().getId());
+            assertEquals(contact.getFirstName(), response.getData().getFirstname());
+            assertEquals(contact.getLastName(), response.getData().getLastname());
+            assertEquals(contact.getEmail(), response.getData().getEmail());
+            assertEquals(contact.getPhone(), response.getData().getPhone());
         });
     }
 }

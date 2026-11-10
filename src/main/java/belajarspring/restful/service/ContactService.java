@@ -7,4 +7,6 @@ import belajarspring.restful.model.CreateContactRequest;
 public interface ContactService {
 
     ContactResponse create(User user, CreateContactRequest createContactRequest);
+
+    ContactResponse get(User user, String id);
 }
